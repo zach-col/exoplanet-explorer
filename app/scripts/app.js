@@ -1,10 +1,10 @@
-
 /*
 Instructions:
-(1) Wrap an XHR in a Promise in the get() function below. See: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest
-  (a) Resolve on load and reject on error.
-(2) If the XHR resolves, use addSearchHeader to add the search header to the page.
-(3) If the XHR fails, console.log the error.
+(1) Refactor .forEach below to create a sequence of Promises that always resolves in the same
+    order it was created.
+  (a) Fetch each planet's JSON from the array of URLs in the search results.
+  (b) Call createPlanetThumb on each planet's response data to add it to the page.
+(2) Use developer tools to determine if the planets are being fetched in series or in parallel.
  */
 
 // Inline configuration for jshint below. Prevents `gulp jshint` from failing with quiz starter code.
@@ -17,45 +17,52 @@ Instructions:
 
   /**
    * Helper function to show the search query.
-   * @param {String} response - The unparsed JSON response from get.
+   * @param {String} query - The search query.
    */
-  function addSearchHeader(response) {
-    try {
-      response = JSON.parse(response).query;  // you'll be moving this line out of here in the next quiz!
-    } catch (e) {
-      // it's 'unknown', so leave it alone
-    }
-    home.innerHTML = '<h2 class="page-title">query: ' + response + '</h2>';
+  function addSearchHeader(query) {
+    home.innerHTML = '<h2 class="page-title">query: ' + query + '</h2>';
   }
 
   /**
-   * XHR wrapped in a promise. Credit to Jake Archibald.
+   * Helper function to create a planet thumbnail.
+   * @param  {Object} data - The raw data describing the planet.
+   */
+  function createPlanetThumb(data) {
+    var pT = document.createElement('planet-thumb');
+    for (var d in data) {
+      pT[d] = data[d];
+    }
+    home.appendChild(pT);
+  }
+
+  /**
+   * XHR wrapped in a promise
    * @param  {String} url - The URL to fetch.
    * @return {Promise}    - A Promise that resolves when the XHR succeeds and fails otherwise.
    */
   function get(url) {
-    return new Promise(function(resolve, reject) {
-      var req = new XMLHttpRequest();
-      req.open('GET', url);
-      req.onload = function() {
-        if (req.status === 200) {
-          resolve(req.response);
-        } else {
-          reject(Error(req.statusText));
-        }
-      };
-      req.onerror = function() {
-        reject(Error('Network Error'));
-      };
-      req.send();
+    return fetch(url);
+  }
+
+  /**
+   * Performs an XHR for a JSON and returns a parsed JSON response.
+   * @param  {String} url - The JSON URL to fetch.
+   * @return {Promise}    - A promise that passes the parsed JSON response.
+   */
+  function getJSON(url) {
+    return get(url).then(function(response) {
+      return response.json();
     });
   }
 
   window.addEventListener('WebComponentsReady', function() {
     home = document.querySelector('section[data-route="home"]');
-    get('../data/earth-like-results.json')
+
+    getJSON('../data/earth-like-results.json')
     .then(function(response) {
-      addSearchHeader(response);
+      addSearchHeader(response.query);
+      console.log(response);
+      return response.results[0];
     })
     .catch(function(error) {
       addSearchHeader('unknown');
